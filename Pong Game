@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Pong Game</title>
+<style>
+    body {
+        background: #111;
+        color: white;
+        font-family: Arial, sans-serif;
+        text-align: center;
+        margin: 0;
+        padding: 0;
+    }
+    canvas {
+        background: #222;
+        display: block;
+        margin: 40px auto;
+        border: 3px solid white;
+    }
+</style>
+</head>
+<body>
+
+<h1>Pong Game</h1>
+<p>Use ↑ and ↓ to move your paddle</p>
+
+<canvas id="game" width="800" height="500"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let player = { x: 20, y: 200, w: 15, h: 100, speed: 6 };
+let cpu = { x: 765, y: 200, w: 15, h: 100, speed: 4 };
+let ball = { x: 400, y: 250, r: 10, dx: 5, dy: 3 };
+
+let playerScore = 0;
+let cpuScore = 0;
+
+let up = false;
+let down = false;
+
+document.addEventListener("keydown", e => {
+    if (e.key === "ArrowUp") up = true;
+    if (e.key === "ArrowDown") down = true;
+});
+document.addEventListener("keyup", e => {
+    if (e.key === "ArrowUp") up = false;
+    if (e.key === "ArrowDown") down = false;
+});
+
+function resetBall() {
+    ball.x = 400;
+    ball.y = 250;
+    ball.dx = -ball.dx;
+    ball.dy = (Math.random() * 4) - 2;
+}
+
+function update() {
+    if (up) player.y -= player.speed;
+    if (down) player.y += player.speed;
+
+    player.y = Math.max(0, Math.min(canvas.height - player.h, player.y));
+
+    ball.x += ball.dx;
+    ball.y += ball.dy;
+
+    if (ball.y < 0 || ball.y > canvas.height) ball.dy *= -1;
+
+    if (
+        ball.x - ball.r < player.x + player.w &&
+        ball.y > player.y &&
+        ball.y < player.y + player.h
+    ) {
+        ball.dx *= -1;
+    }
+
+    if (
+        ball.x + ball.r > cpu.x &&
+        ball.y > cpu.y &&
+        ball.y < cpu.y + cpu.h
+    ) {
+        ball.dx *= -1;
+    }
+
+    if (ball.x < 0) {
+        cpuScore++;
+        resetBall();
+    }
+    if (ball.x > canvas.width) {
+        playerScore++;
+        resetBall();
+    }
+
+    if (ball.y > cpu.y + cpu.h / 2) cpu.y += cpu.speed;
+    else cpu.y -= cpu.speed;
+
+    cpu.y = Math.max(0, Math.min(canvas.height - cpu.h, cpu.y));
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = "white";
+    ctx.fillRect(player.x, player.y, player.w, player.h);
+    ctx.fillRect(cpu.x, cpu.y, cpu.w, cpu.h);
+
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.font = "24px Arial";
+    ctx.fillText(playerScore, 350, 30);
+    ctx.fillText(cpuScore, 430, 30);
+}
+
+function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+
+</body>
+</html>
