@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TABLE TENNIS</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --court: #0a1628;
+    --green: #00ff88;
+    --cyan: #00e5ff;
+    --red: #ff3366;
+    --yellow: #ffe44d;
+    --dim: #1a2a40;
+    --text: #e0f7ff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #050d1a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: 'Press Start 2P', monospace;
+    color: var(--text);
+    overflow: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(0,229,255,0.03) 39px, rgba(0,229,255,0.03) 40px),
+      repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(0,229,255,0.03) 39px, rgba(0,229,255,0.03) 40px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  #wrapper {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  #title-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    letter-spacing: 4px;
+    font-size: 14px;
+    color: var(--cyan);
+    text-shadow: 0 0 12px var(--cyan), 0 0 24px var(--cyan);
+    margin-bottom: 4px;
+  }
+
+  #title-bar span.dot {
+    width: 8px; height: 8px;
+    background: var(--green);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--green);
+    display: inline-block;
+    animation: blink 1s infinite;
+  }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  #score-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 800px;
+    padding: 10px 24px;
+    background: var(--dim);
+    border: 1px solid rgba(0,229,255,0.2);
+    border-radius: 4px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  .score-block { text-align: center; }
+  .score-label { font-size: 9px; color: rgba(255,255,255,0.4); letter-spacing: 2px; margin-bottom: 4px; font-family: 'Press Start 2P', monospace; }
+  .score-num { font-size: 32px; font-family: 'Share Tech Mono', monospace; }
+  #p1-score { color: var(--green); text-shadow: 0 0 10px var(--green); }
+  #p2-score { color: var(--red); text-shadow: 0 0 10px var(--red); }
+  #score-divider { font-size: 28px; color: rgba(255,255,255,0.2); font-family: 'Share Tech Mono', monospace; }
+
+  #win-target {
+    font-size: 9px;
+    color: rgba(255,255,255,0.3);
+    letter-spacing: 2px;
+    font-family: 'Press Start 2P', monospace;
+    text-align: center;
+  }
+
+  #canvas-wrap {
+    position: relative;
+    border: 1px solid rgba(0,229,255,0.25);
+    box-shadow: 0 0 30px rgba(0,229,255,0.1), inset 0 0 60px rgba(0,0,0,0.5);
+  }
+
+  canvas {
+    display: block;
+    background: var(--court);
+  }
+
+  #overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(5,13,26,0.88);
+    gap: 20px;
+    backdrop-filter: blur(2px);
+  }
+
+  #overlay.hidden { display: none; }
+
+  .overlay-title {
+    font-size: 22px;
+    color: var(--cyan);
+    text-shadow: 0 0 16px var(--cyan);
+    letter-spacing: 4px;
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  .overlay-sub {
+    font-size: 9px;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 3px;
+    text-align: center;
+    line-height: 2;
+  }
+
+  .btn-row { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+
+  .btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    padding: 12px 20px;
+    border: 1px solid;
+    border-radius: 2px;
+    cursor: pointer;
+    background: transparent;
+    letter-spacing: 2px;
+    transition: all 0.15s;
+  }
+
+  .btn-green { color: var(--green); border-color: var(--green); }
+  .btn-green:hover { background: var(--green); color: #050d1a; box-shadow: 0 0 16px var(--green); }
+  .btn-cyan { color: var(--cyan); border-color: var(--cyan); }
+  .btn-cyan:hover { background: var(--cyan); color: #050d1a; box-shadow: 0 0 16px var(--cyan); }
+  .btn-red { color: var(--red); border-color: var(--red); }
+  .btn-red:hover { background: var(--red); color: #fff; box-shadow: 0 0 16px var(--red); }
+
+  .diff-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .diff-btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    padding: 8px 14px;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 2px;
+    cursor: pointer;
+    background: transparent;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 1px;
+    transition: all 0.15s;
+  }
+  .diff-btn.active { border-color: var(--yellow); color: var(--yellow); box-shadow: 0 0 8px var(--yellow); }
+  .diff-btn:hover { border-color: rgba(255,255,255,0.5); color: rgba(255,255,255,0.7); }
+
+  .score-pick { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .score-btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    padding: 8px 12px;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 2px;
+    cursor: pointer;
+    background: transparent;
+    color: rgba(255,255,255,0.4);
+    transition: all 0.15s;
+  }
+  .score-btn.active { border-color: var(--cyan); color: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+  .score-btn:hover { border-color: rgba(255,255,255,0.5); color: rgba(255,255,255,0.7); }
+
+  #controls-hint {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.2);
+    letter-spacing: 2px;
+    text-align: center;
+    margin-top: 4px;
+  }
+
+  #winner-text {
+    font-size: 18px;
+    letter-spacing: 3px;
+    text-align: center;
+    line-height: 1.8;
+  }
+</style>
+</head>
+<body>
+<div id="wrapper">
+  <div id="title-bar">
+    <span class="dot"></span>
+    TABLE TENNIS
+    <span class="dot"></span>
+  </div>
+
+  <div id="score-bar">
+    <div class="score-block">
+      <div class="score-label">YOU</div>
+      <div class="score-num" id="p1-score">0</div>
+    </div>
+    <div>
+      <div id="win-target">FIRST TO <span id="win-show">7</span></div>
+      <div id="score-divider">—</div>
+    </div>
+    <div class="score-block">
+      <div class="score-label">CPU</div>
+      <div class="score-num" id="p2-score">0</div>
+    </div>
+  </div>
+
+  <div id="canvas-wrap">
+    <canvas id="c" width="800" height="480"></canvas>
+    <div id="overlay">
+      <div class="overlay-title">🏓 TABLE TENNIS</div>
+      <div class="overlay-sub">
+        DIFFICULTY<br>
+        <div class="diff-row" style="margin-top:8px">
+          <button class="diff-btn" data-d="easy">EASY</button>
+          <button class="diff-btn active" data-d="medium">MEDIUM</button>
+          <button class="diff-btn" data-d="hard">HARD</button>
+        </div>
+      </div>
+      <div class="overlay-sub">
+        FIRST TO WIN<br>
+        <div class="score-pick" style="margin-top:8px">
+          <button class="score-btn" data-s="5">5</button>
+          <button class="score-btn active" data-s="7">7</button>
+          <button class="score-btn" data-s="11">11</button>
+          <button class="score-btn" data-s="21">21</button>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-green" id="start-btn">▶ START GAME</button>
+      </div>
+      <div class="overlay-sub">↑ ↓ ARROW KEYS TO MOVE</div>
+    </div>
+  </div>
+
+  <div id="controls-hint">↑ ↓ MOVE &nbsp;|&nbsp; P PAUSE</div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+const overlay = document.getElementById('overlay');
+const p1El = document.getElementById('p1-score');
+const p2El = document.getElementById('p2-score');
+const winShow = document.getElementById('win-show');
+
+let state = 'menu'; // menu, playing, paused, scored, gameover
+let winScore = 7;
+let difficulty = 'medium';
+let p1Score = 0, p2Score = 0;
+
+// Difficulty configs
+const DIFF = {
+  easy:   { aiSpeed: 2.2, paddleH: 90, ballSpeed: 4.5 },
+  medium: { aiSpeed: 3.5, paddleH: 70, ballSpeed: 5.5 },
+  hard:   { aiSpeed: 5.2, paddleH: 55, ballSpeed: 7.0 },
+};
+
+const PAD_W = 10;
+let padH = 70;
+const BALL_R = 7;
+
+let p1 = { x: 20, y: H/2 - 35, dy: 0 };
+let p2 = { x: W - 20 - PAD_W, y: H/2 - 35 };
+let ball = { x: W/2, y: H/2, vx: 0, vy: 0 };
+let trail = [];
+let particles = [];
+let scored = false;
+let scoredTimer = 0;
+let keys = {};
+
+// Diff buttons
+document.querySelectorAll('.diff-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    difficulty = btn.dataset.d;
+  });
+});
+
+// Score buttons
+document.querySelectorAll('.score-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.score-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    winScore = parseInt(btn.dataset.s);
+    winShow.textContent = winScore;
+    document.getElementById('win-show').textContent = winScore;
+  });
+});
+
+document.getElementById('start-btn').addEventListener('click', startGame);
+
+document.addEventListener('keydown', e => {
+  keys[e.key] = true;
+  if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault();
+  if (e.key === 'p' || e.key === 'P') {
+    if (state === 'playing') { state = 'paused'; showPause(); }
+    else if (state === 'paused') { state = 'playing'; overlay.classList.add('hidden'); }
+  }
+});
+document.addEventListener('keyup', e => { keys[e.key] = false; });
+
+function showPause() {
+  overlay.classList.remove('hidden');
+  overlay.innerHTML = `
+    <div class="overlay-title">PAUSED</div>
+    <div class="btn-row">
+      <button class="btn btn-green" onclick="resumeGame()">▶ RESUME</button>
+      <button class="btn btn-red" onclick="goMenu()">✕ MENU</button>
+    </div>
+    <div class="overlay-sub">PRESS P TO RESUME</div>`;
+}
+
+function showGameOver(winner) {
+  state = 'gameover';
+  overlay.classList.remove('hidden');
+  const isP1 = winner === 'p1';
+  overlay.innerHTML = `
+    <div class="overlay-title">${isP1 ? '🏆 YOU WIN!' : '💀 CPU WINS'}</div>
+    <div id="winner-text" style="color:${isP1 ? 'var(--green)' : 'var(--red)'}; text-shadow: 0 0 16px ${isP1 ? 'var(--green)' : 'var(--red)'}">
+      ${p1Score} — ${p2Score}
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-cyan" onclick="startGame()">▶ PLAY AGAIN</button>
+      <button class="btn btn-red" onclick="goMenu()">✕ MENU</button>
+    </div>`;
+}
+
+function resumeGame() {
+  state = 'playing';
+  overlay.classList.add('hidden');
+}
+
+function goMenu() {
+  state = 'menu';
+  p1Score = 0; p2Score = 0;
+  p1El.textContent = '0'; p2El.textContent = '0';
+  overlay.classList.remove('hidden');
+  overlay.innerHTML = `
+    <div class="overlay-title">🏓 TABLE TENNIS</div>
+    <div class="overlay-sub">
+      DIFFICULTY<br>
+      <div class="diff-row" style="margin-top:8px">
+        <button class="diff-btn${difficulty==='easy'?' active':''}" data-d="easy">EASY</button>
+        <button class="diff-btn${difficulty==='medium'?' active':''}" data-d="medium">MEDIUM</button>
+        <button class="diff-btn${difficulty==='hard'?' active':''}" data-d="hard">HARD</button>
+      </div>
+    </div>
+    <div class="overlay-sub">
+      FIRST TO WIN<br>
+      <div class="score-pick" style="margin-top:8px">
+        <button class="score-btn${winScore===5?' active':''}" data-s="5">5</button>
+        <button class="score-btn${winScore===7?' active':''}" data-s="7">7</button>
+        <button class="score-btn${winScore===11?' active':''}" data-s="11">11</button>
+        <button class="score-btn${winScore===21?' active':''}" data-s="21">21</button>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-green" id="start-btn">▶ START GAME</button>
+    </div>
+    <div class="overlay-sub">↑ ↓ ARROW KEYS TO MOVE</div>`;
+
+  document.querySelectorAll('.diff-btn').forEach(btn => btn.addEventListener('click', () => {
+    document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active'); difficulty = btn.dataset.d;
+  }));
+  document.querySelectorAll('.score-btn').forEach(btn => btn.addEventListener('click', () => {
+    document.querySelectorAll('.score-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active'); winScore = parseInt(btn.dataset.s);
+    document.getElementById('win-show').textContent = winScore;
+  }));
+  document.getElementById('start-btn').addEventListener('click', startGame);
+}
+
+function startGame() {
+  const cfg = DIFF[difficulty];
+  padH = cfg.paddleH;
+  p1 = { x: 20, y: H/2 - padH/2, dy: 0 };
+  p2 = { x: W - 20 - PAD_W, y: H/2 - padH/2 };
+  p1Score = 0; p2Score = 0;
+  p1El.textContent = '0'; p2El.textContent = '0';
+  winShow.textContent = winScore;
+  document.getElementById('win-show').textContent = winScore;
+  trail = []; particles = [];
+  launchBall();
+  state = 'playing';
+  overlay.classList.add('hidden');
+}
+
+function launchBall() {
+  const cfg = DIFF[difficulty];
+  const sp = cfg.ballSpeed;
+  const angle = (Math.random() * 0.6 - 0.3) + (Math.random() > 0.5 ? 0 : Math.PI);
+  ball = { x: W/2, y: H/2, vx: Math.cos(angle) * sp, vy: Math.sin(angle) * sp };
+}
+
+function spawnParticles(x, y, color) {
+  for (let i = 0; i < 18; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const spd = Math.random() * 4 + 1;
+    particles.push({ x, y, vx: Math.cos(angle)*spd, vy: Math.sin(angle)*spd, life: 1, color });
+  }
+}
+
+function update() {
+  if (state !== 'playing') return;
+
+  const cfg = DIFF[difficulty];
+
+  // Player movement
+  const padSpeed = 6;
+  if (keys['ArrowUp'])   { p1.y -= padSpeed; }
+  if (keys['ArrowDown']) { p1.y += padSpeed; }
+  p1.y = Math.max(0, Math.min(H - padH, p1.y));
+
+  // CPU AI
+  const cpuCenter = p2.y + padH / 2;
+  const diff = ball.y - cpuCenter;
+  const aiMove = Math.min(Math.abs(diff), cfg.aiSpeed) * Math.sign(diff);
+  p2.y += aiMove;
+  p2.y = Math.max(0, Math.min(H - padH, p2.y));
+
+  // Ball movement
+  ball.x += ball.vx;
+  ball.y += ball.vy;
+
+  // Trail
+  trail.push({ x: ball.x, y: ball.y, t: 1 });
+  if (trail.length > 14) trail.shift();
+  trail.forEach(t => t.t -= 0.07);
+
+  // Wall bounce
+  if (ball.y - BALL_R < 0) { ball.y = BALL_R; ball.vy *= -1; spawnParticles(ball.x, ball.y, '#00e5ff'); }
+  if (ball.y + BALL_R > H) { ball.y = H - BALL_R; ball.vy *= -1; spawnParticles(ball.x, ball.y, '#00e5ff'); }
+
+  // Paddle collision helper
+  function hitPad(pad) {
+    return ball.x - BALL_R < pad.x + PAD_W &&
+           ball.x + BALL_R > pad.x &&
+           ball.y > pad.y && ball.y < pad.y + padH;
+  }
+
+  if (hitPad(p1) && ball.vx < 0) {
+    ball.x = p1.x + PAD_W + BALL_R;
+    const relHit = (ball.y - (p1.y + padH/2)) / (padH/2);
+    const angle = relHit * 0.9;
+    const spd = Math.min(Math.hypot(ball.vx, ball.vy) * 1.05, 14);
+    ball.vx = Math.cos(angle) * spd;
+    ball.vy = Math.sin(angle) * spd;
+    spawnParticles(ball.x, ball.y, '#00ff88');
+  }
+
+  if (hitPad(p2) && ball.vx > 0) {
+    ball.x = p2.x - BALL_R;
+    const relHit = (ball.y - (p2.y + padH/2)) / (padH/2);
+    const angle = Math.PI - relHit * 0.9;
+    const spd = Math.min(Math.hypot(ball.vx, ball.vy) * 1.05, 14);
+    ball.vx = Math.cos(angle) * spd;
+    ball.vy = Math.sin(angle) * spd;
+    spawnParticles(ball.x, ball.y, '#ff3366');
+  }
+
+  // Score
+  if (ball.x + BALL_R < 0) {
+    p2Score++; p2El.textContent = p2Score;
+    flashScore('p2');
+    if (p2Score >= winScore) { showGameOver('p2'); return; }
+    resetPoint();
+  }
+  if (ball.x - BALL_R > W) {
+    p1Score++; p1El.textContent = p1Score;
+    flashScore('p1');
+    if (p1Score >= winScore) { showGameOver('p1'); return; }
+    resetPoint();
+  }
+
+  // Particles
+  particles.forEach(p => {
+    p.x += p.vx; p.y += p.vy;
+    p.vx *= 0.93; p.vy *= 0.93;
+    p.life -= 0.04;
+  });
+  particles = particles.filter(p => p.life > 0);
+}
+
+let flashEl = null;
+function flashScore(side) {
+  const el = side === 'p1' ? p1El : p2El;
+  el.style.transform = 'scale(1.5)';
+  setTimeout(() => { el.style.transform = ''; }, 300);
+}
+
+function resetPoint() {
+  trail = [];
+  p1.y = H/2 - padH/2;
+  p2.y = H/2 - padH/2;
+  setTimeout(() => { if (state === 'playing') launchBall(); }, 800);
+  ball.vx = 0; ball.vy = 0;
+  ball.x = W/2; ball.y = H/2;
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  // Court background
+  ctx.fillStyle = '#0a1628';
+  ctx.fillRect(0, 0, W, H);
+
+  // Center line dashes
+  ctx.setLineDash([12, 10]);
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(W/2, 0); ctx.lineTo(W/2, H);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Net
+  for (let y = 0; y < H; y += 16) {
+    ctx.fillStyle = y % 32 === 0 ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.07)';
+    ctx.fillRect(W/2 - 1, y, 2, 10);
+  }
+
+  // Trail
+  trail.forEach((t, i) => {
+    const a = t.t * 0.5;
+    const r = BALL_R * (t.t * 0.7 + 0.1);
+    ctx.beginPath();
+    ctx.arc(t.x, t.y, r, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(0,229,255,${a})`;
+    ctx.fill();
+  });
+
+  // Ball
+  ctx.save();
+  ctx.shadowBlur = 20;
+  ctx.shadowColor = '#fff';
+  ctx.beginPath();
+  ctx.arc(ball.x, ball.y, BALL_R, 0, Math.PI*2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.restore();
+
+  // Paddles
+  function drawPad(pad, color, glowColor) {
+    ctx.save();
+    ctx.shadowBlur = 18;
+    ctx.shadowColor = glowColor;
+    const grad = ctx.createLinearGradient(pad.x, pad.y, pad.x + PAD_W, pad.y);
+    grad.addColorStop(0, color);
+    grad.addColorStop(1, glowColor);
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.roundRect(pad.x, pad.y, PAD_W, padH, 3);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  drawPad(p1, '#00cc66', '#00ff88');
+  drawPad(p2, '#cc2244', '#ff3366');
+
+  // Particles
+  particles.forEach(p => {
+    ctx.save();
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 3, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  });
+
+  // Paused overlay dim (canvas side)
+  if (state === 'paused') {
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.fillRect(0, 0, W, H);
+  }
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+</body>
+</html>
